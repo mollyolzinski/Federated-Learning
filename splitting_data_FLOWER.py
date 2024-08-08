@@ -94,7 +94,7 @@ def partition_dataset(path_data_csv: str, n_splits: int, n_splits_test: float, r
 if __name__ == '__main__':
 
     DEFAULT_N_SPLITS_TRAIN = 3
-    DEFAULT_N_SPLITS_TEST = 10
+    DEFAULT_N_SPLITS_TEST = 5
     DEFAULT_RANDOM_STATE = 42
     
     parser = argparse.ArgumentParser(description="Update dataset with split indices")
@@ -135,4 +135,5 @@ if __name__ == '__main__':
     random_state = args.random_state
 
     df = partition_dataset(path_data_csv, n_splits_train, n_splits_test, random_state)
+    print(df[f'{n_splits_train}_splits'].value_counts())
     df.to_csv(path_out, index=False)

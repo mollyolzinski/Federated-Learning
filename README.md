@@ -1,10 +1,7 @@
-# Federated-Learning
+# FEDERATED LEARNING WITH HEALTHY BRAIN NETWORK DATA: INTEGRATING FREESURFER METRICS AND AGE-BASED STRATIFICATION USING FLOWER
 Federated Learning repository for Neurohackademy 2024
 
 ![download](https://github.com/user-attachments/assets/6574bff2-13c6-4b13-b17e-16008068521d)
-
-## TITLE 
-FEDERATED LEARNING WITH HEALTHY BRAIN NETWORK DATA: INTEGRATING FREESURFER METRICS AND AGE-BASED STRATIFICATION USING FLOWER
 
 ## DESCRIPTION
 Federated learning (FL) has become a promising machine learning method for conducting large-scale analyses across multiple institutions without the need to share data. With FL, data privacy and security are maintained, as the data never leave the institution; only encrypted model parameters are exchanged and aggregated. The aim of our project 

@@ -1,7 +1,8 @@
-# FEDERATED LEARNING WITH HEALTHY BRAIN NETWORK DATA: INTEGRATING FREESURFER METRICS AND AGE-BASED STRATIFICATION USING FLOWER
+# Federated Learning With Healthy Brain Network Data: Integrating FreeSurfer Metrics And Age-Based Stratification Using Flower
 Federated Learning repository for Neurohackademy 2024
 
-![download](https://github.com/user-attachments/assets/6574bff2-13c6-4b13-b17e-16008068521d)
+![download](https://github.com/user-attachments/assets/6574bff2-13c6-4b13-b17e-16008068521d) ![download](https://github.com/user-attachments/assets/78566728-c1f5-45cd-8a66-ea8bca29523e)
+
 
 ## DESCRIPTION
 Federated learning (FL) has become a promising machine learning method for conducting large-scale analyses across multiple institutions without the need to share data. With FL, data privacy and security are maintained, as the data never leave the institution; only encrypted model parameters are exchanged and aggregated. The aim of our project was to explore the use of FL using Flower and scikit-learn to predict brain age using measures of grey and white matter volume. 
@@ -32,5 +33,8 @@ Visualization Code: Includes commented-out code for plotting the distribution of
 Project url(s): (https://github.com/mollyolzinski/Federated-Learning.git) 
 
 Contributors: [Michelle Wang](https://github.com/michellewang), [Emma Corley](https://github.com/emmajanecorley), [Eren Kafadar](https://github.com/kafadare), [Molly Olzinski](https://github.com/mollyolzinski), [Aoife Warren](https://github.com/AoifeWarren), [Audrey Weber](https://github.com/aweber7), [Maya Lakshman](https://github.com/mayalakshman) 
+
+
+![IMG_4728](https://github.com/user-attachments/assets/ded120b4-0da1-4179-8027-0ad470831c0c)
 
 

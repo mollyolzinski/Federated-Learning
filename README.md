@@ -3,17 +3,6 @@ Federated Learning repository for Neurohackademy 2024
 
 ![download](https://github.com/user-attachments/assets/6574bff2-13c6-4b13-b17e-16008068521d)
 
-Proj Description
-
-Contributors:
-- Aoife Warren 
-- Audrey Weber
-- Emma Corely
-- Eren Kafadar
-- Maya Lakshman
-- Michelle Wang
-- Molly Olzinski
-
 TITLE: 
 FEDERATED LEARNING WITH HEALTHY BRAIN NETWORK DATA: INTEGRATING FREESURFER METRICS AND AGE-BASED STRATIFICATION USING FLOWER
 
@@ -42,5 +31,14 @@ Visualization Code: Includes commented-out code for plotting the distribution of
 
 
 Project url(s): (https://github.com/mollyolzinski/Federated-Learning.git) 
-Contributors: [Michelle Wang](https://github.com/michellewang), [Emma Corley] (https://github.com/emmajanecorley), [Eren Kafadar](https://github.com/kafadare), [Molly Olzinski](https://github.com/mollyolzinski), [Aoife Warren](https://github.com/AoifeWarren), [Audrey Weber](https://github.com/aweber7), [Maya Lakshman](https://github.com/mayalakshman) 
+
+Contributors: [Michelle Wang](https://github.com/michellewang), [Emma Corley](https://github.com/emmajanecorley), [Eren Kafadar](https://github.com/kafadare), [Molly Olzinski](https://github.com/mollyolzinski), [Aoife Warren](https://github.com/AoifeWarren), [Audrey Weber](https://github.com/aweber7), [Maya Lakshman](https://github.com/mayalakshman) 
+
+- Aoife Warren 
+- Audrey Weber
+- Emma Corely
+- Eren Kafadar
+- Maya Lakshman
+- Michelle Wang
+- Molly Olzinski
 

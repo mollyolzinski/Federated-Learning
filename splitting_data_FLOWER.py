@@ -94,7 +94,7 @@ def partition_dataset(path_data_csv: str, n_splits: int, n_splits_test: float, r
 if __name__ == '__main__':
 
     DEFAULT_N_SPLITS_TRAIN = 3
-    DEFAULT_N_SPLITS_TEST = 10
+    DEFAULT_N_SPLITS_TEST = 5
     DEFAULT_RANDOM_STATE = 42
     
     parser = argparse.ArgumentParser(description="Update dataset with split indices")

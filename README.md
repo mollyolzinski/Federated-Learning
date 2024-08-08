@@ -3,10 +3,10 @@ Federated Learning repository for Neurohackademy 2024
 
 ![download](https://github.com/user-attachments/assets/6574bff2-13c6-4b13-b17e-16008068521d)
 
-## TITLE: 
+## TITLE 
 FEDERATED LEARNING WITH HEALTHY BRAIN NETWORK DATA: INTEGRATING FREESURFER METRICS AND AGE-BASED STRATIFICATION USING FLOWER
 
-## DESCRIPTION: 
+## DESCRIPTION
 Federated learning (FL) has become a promising machine learning method for conducting large-scale analyses across multiple institutions without the need to share data. With FL, data privacy and security are maintained, as the data never leave the institution; only encrypted model parameters are exchanged and aggregated. The aim of our project 
 
 We first focus on collating FreeSurfer statistical data across multiple subjects, focusing on both cortical and subcortical brain region from the Healthy Brain Network (HBN). The HBN includes  MRI and clinical assessment data from 5,000 NYC area adolescents (ages 5-21), at four sites: RU, CBIC, CUNY, SI. For our specific sample we included 223 participants who had age and freesurfer deriviates available. Our script (client_newmodel.py) sets up a client for federated learning using the Flower framework package (see https://flower.ai/docs/framework/tutorial-series-what-is-federated-learning.html for more details). It enables training and evaluation of machine learning models (Logistic Regression, Linear Regression, LassoCV) on different partitions of the HBN sample. The client communicates with a federated learning server to participate in model training and evaluation tasks over multiple rounds of federated learning, and saves the aggregated model weights after each round, in our case we use 3. 

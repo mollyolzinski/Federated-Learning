@@ -1,7 +1,8 @@
 # Federated Learning With Healthy Brain Network Data: Integrating FreeSurfer Metrics And Age-Based Stratification Using Flower
 Federated Learning repository for Neurohackademy 2024
 
-![download](https://github.com/user-attachments/assets/6574bff2-13c6-4b13-b17e-16008068521d)                              ![download](https://github.com/user-attachments/assets/78566728-c1f5-45cd-8a66-ea8bca29523e)
+![download](https://github.com/user-attachments/assets/6574bff2-13c6-4b13-b17e-16008068521d)                             
+![download](https://github.com/user-attachments/assets/78566728-c1f5-45cd-8a66-ea8bca29523e)
 
 
 ## DESCRIPTION

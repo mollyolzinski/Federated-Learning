@@ -135,4 +135,5 @@ if __name__ == '__main__':
     random_state = args.random_state
 
     df = partition_dataset(path_data_csv, n_splits_train, n_splits_test, random_state)
+    print(df[f'{n_splits_train}_splits'].value_counts())
     df.to_csv(path_out, index=False)

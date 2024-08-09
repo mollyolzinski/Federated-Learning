@@ -13,7 +13,6 @@ from sklearn.linear_model import LogisticRegression, LinearRegression, LassoCV
 from sklearn.svm import SVR
 from typing import Dict
 import matplotlib.pyplot as plt
-from flwr_datasets import FederatedDataset
 
 class MnistClient(fl.client.NumPyClient):
     def get_parameters(self, config):  # type: ignore

@@ -38,22 +38,17 @@ class MnistClient(fl.client.NumPyClient):
     
     def evaluate(self, parameters, config):  # type: ignore
         utils.set_model_params(model, parameters)
-        if isinstance(model, LogisticRegression):
-            loss = log_loss(y_test, model.predict_proba(X_test))
-            accuracy = model.score(X_test, y_test)
-        if isinstance(model, (LinearRegression, LassoCV)):
-            loss = mean_squared_error(y_test, model.predict(X_test))
-            accuracy = r2_score(y_test,model.predict(X_test))
-
-        # Save aggregated_metrics
         server_round = config["server_round"]
-        print(f"Saving round {server_round} aggregated_metrics...")
-        Path(f"round-{server_round}-partition-{partition_id}-metrics.json").write_text(json.dumps({
-            "loss": loss,
-            "accuracy": accuracy,
-        }))
+        metrics = utils.get_metrics(
+            model=model,
+            X_test=X_test,
+            y_test=y_test,
+            round_number=server_round,
+            source='client',
+            partition_id=partition_id,
+        )
 
-        return loss, len(X_test), {"accuracy": accuracy}
+        return metrics['loss'], len(X_test), metrics
 
 if __name__ == "__main__": #run only if the script is being run directly as opposed to being imported from this script
     N_CLIENTS = 10

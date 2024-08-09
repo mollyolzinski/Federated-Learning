@@ -8,12 +8,17 @@ import utils
 import numpy as np
 import pandas as pd
 import argparse
-from flwr.common import NDArrays, Scalar
+from flwr.common import NDArrays, Scalar, EvaluateRes
 from pathlib import Path
 from sklearn.metrics import log_loss, mean_squared_error, r2_score 
 from sklearn.linear_model import LogisticRegression, LinearRegression, LassoCV
 from sklearn.svm import SVR
 from typing import List, Union, Dict, Optional, Tuple
+
+EvaluateResultsAndFailures = Tuple[
+    List[Tuple[fl.server.client_proxy.ClientProxy, EvaluateRes]],
+    List[Union[Tuple[fl.server.client_proxy.ClientProxy, EvaluateRes], BaseException]],
+]
 
 class SaveModelStrategy(fl.server.strategy.FedAvg):
     def aggregate_fit(
@@ -35,7 +40,21 @@ class SaveModelStrategy(fl.server.strategy.FedAvg):
             np.savez(f"round-{server_round}-weights.npz", *aggregated_ndarrays)
 
         return aggregated_parameters, aggregated_metrics
-    
+
+    def aggregate_evaluate(
+        self,
+        server_round: int,
+        results: List[Tuple[fl.server.client_proxy.ClientProxy, fl.common.EvaluateRes]],
+        failures: List[Union[Tuple[fl.server.client_proxy.ClientProxy, fl.common.EvaluateRes], BaseException]],
+    ) -> Tuple[Optional[float], Dict[str, Scalar]]:
+        """Aggregate evaluation losses using weighted average."""
+
+        metrics_list.extend([r[1].metrics for r in results])
+        
+        loss_aggregated, metrics_aggregated = super().aggregate_evaluate(server_round, results, failures)
+
+        return loss_aggregated, metrics_aggregated
+
 def fit_round(server_round: int) -> Dict:
     """Send round number to client."""
     return {"server_round": server_round}
@@ -56,34 +75,38 @@ def get_evaluate_fn(model):
             server_round: int, parameters: NDArrays, config: Dict[str, Scalar]
         ) -> Optional[Tuple[float, Dict[str, Scalar]]]:
             utils.set_model_params(model, parameters)
-            loss = log_loss(y_test, model.predict_proba(X_test))
-            accuracy = model.score(X_test, y_test)
+
+            metrics = utils.get_metrics(
+                model=model,
+                X_test=X_test,
+                y_test=y_test,
+                round_number=server_round,
+                source='server',
+                partition_id=None,
+            )
+
+            # config['metrics_list'].append(metrics)
+            metrics_list.append(metrics)
             
-            # Save aggregated_metrics
-            print(f"Saving round {server_round} aggregated_metrics...")
-            Path(f"round-{server_round}-metrics.json").write_text(json.dumps({
-                "loss": loss,
-                "accuracy": accuracy,
-            }))
-            
-            return loss, {"accuracy": accuracy}
+            return metrics['loss'], metrics
 
     if isinstance(model, (LinearRegression, LassoCV)):
         def evaluate(
             server_round: int, parameters: NDArrays, config: Dict[str, Scalar]
         ) -> Optional[Tuple[float, Dict[str, Scalar]]]:
             utils.set_model_params(model, parameters)
-            loss = mean_squared_error(y_test, model.predict(X_test))
-            accuracy = r2_score(y_test,model.predict(X_test))
 
-            # Save aggregated_metrics
-            print(f"Saving round {server_round} aggregated_metrics...")
-            Path(f"round-{server_round}-metrics.json").write_text(json.dumps({
-                "loss": loss,
-                "accuracy": accuracy,
-            }))
-
-            return loss, {"accuracy": accuracy}
+            metrics = utils.get_metrics(
+                model=model,
+                X_test=X_test,
+                y_test=y_test,
+                round_number=server_round,
+                source='server',
+                partition_id=None,
+            )
+            metrics_list.append(metrics)
+            
+            return metrics['loss'], metrics
 
     return evaluate
 
@@ -129,7 +152,9 @@ if __name__ == "__main__":
     split_col = args.split_col
     y_col = args.y_col
 
-  #choose model from args input and specify model parameters
+    metrics_list = []
+
+    #choose model from args input and specify model parameters
     if model_str == 'LogisticRegression':
         model = LogisticRegression()
     elif model_str == 'LinearRegression':
@@ -154,3 +179,9 @@ if __name__ == "__main__":
 
     fl.server.start_server(server_address="0.0.0.0:8080", strategy=strategy, 
                            config=fl.server.ServerConfig(num_rounds=5))
+
+    df_metrics = pd.DataFrame(metrics_list)
+    print(df_metrics)
+
+    
+        

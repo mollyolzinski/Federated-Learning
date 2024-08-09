@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 import numpy as np
+from sklearn.metrics import log_loss, mean_squared_error, r2_score 
 from sklearn.linear_model import LogisticRegression, LinearRegression, LassoCV
 from sklearn.svm import SVR
 
@@ -37,6 +38,28 @@ def get_train_test_data(path_csv: Path, split_col: str, y_col: str, partition_id
     X_test = dataset_test.drop(columns = [y_col])
 
     return (X_train, y_train), (X_test, y_test)
+
+def get_metrics(model, X_test, y_test, round_number, source, partition_id=None) -> dict:
+    metrics = {
+        'round_number': round_number,
+        'source': source,
+        'partition_id': partition_id,
+    }
+    if isinstance(model, LogisticRegression):
+        metrics.update({
+            'loss': log_loss(y_test, model.predict_proba(X_test)),
+            'accuracy': model.score(X_test, y_test),
+        })
+    elif isinstance(model, (LinearRegression, LassoCV)):
+        y_pred = model.predict(X_test)
+        metrics.update({
+            'loss': mean_squared_error(y_test, y_pred),
+            'accuracy': r2_score(y_test, y_pred),
+        })
+    else:
+        raise RuntimeError(f'Unsupported model: {model}')
+
+    return metrics
 
 def get_model_parameters(model) -> NDArrays:
     """Returns the parameters of a sklearn LogisticRegression model."""

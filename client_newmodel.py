@@ -4,14 +4,17 @@
 
 import flwr as fl
 import utils
+import json
 import argparse
 import warnings
+import numpy as np
 import pandas as pd
 from flwr.common import NDArrays, Scalar
 from sklearn.metrics import log_loss, mean_squared_error, r2_score
 from sklearn.linear_model import LogisticRegression, LinearRegression, LassoCV
 from sklearn.svm import SVR
 from typing import Dict
+from pathlib import Path
 import matplotlib.pyplot as plt
 
 class MnistClient(fl.client.NumPyClient):
@@ -23,7 +26,14 @@ class MnistClient(fl.client.NumPyClient):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             model.fit(X_train, y_train)
-        print(f"Training finished for round {config['server_round']}")
+            
+        server_round = config["server_round"]
+        print(f"Training finished for round {server_round}")
+
+        # Save aggregated_ndarrays
+        print(f"Saving round {server_round} parameters...")
+        np.savez(f"round-{server_round}-partition-{partition_id}-weights.npz", *parameters)
+        
         return utils.get_model_parameters(model), len(X_train), {}
     
     def evaluate(self, parameters, config):  # type: ignore
@@ -34,6 +44,15 @@ class MnistClient(fl.client.NumPyClient):
         if isinstance(model, (LinearRegression, LassoCV)):
             loss = mean_squared_error(y_test, model.predict(X_test))
             accuracy = r2_score(y_test,model.predict(X_test))
+
+        # Save aggregated_metrics
+        server_round = config["server_round"]
+        print(f"Saving round {server_round} aggregated_metrics...")
+        Path(f"round-{server_round}-partition-{partition_id}-metrics.json").write_text(json.dumps({
+            "loss": loss,
+            "accuracy": accuracy,
+        }))
+
         return loss, len(X_test), {"accuracy": accuracy}
 
 if __name__ == "__main__": #run only if the script is being run directly as opposed to being imported from this script
@@ -58,7 +77,7 @@ if __name__ == "__main__": #run only if the script is being run directly as oppo
     partition_id = args.partition_id
     model_str = args.model
 
-#Loads the data and splits into train and test datasets
+    #Loads the data and splits into train and test datasets
     dataset_full:pd.DataFrame = pd.read_csv("hbn_fs_data_split.csv")
     dataset_full["sex"] = dataset_full["sex"].map({"M": 1, "F": 2})
     dataset_full = dataset_full.drop (columns = ['subject_id', 

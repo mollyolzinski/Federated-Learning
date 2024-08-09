@@ -135,6 +135,7 @@ if __name__ == "__main__":
         min_evaluate_clients=min_clients,
         evaluate_fn=get_evaluate_fn(model),
         on_fit_config_fn=fit_round, 
+        on_evaluate_config_fn=fit_round,
     )  
 
     fl.server.start_server(server_address="0.0.0.0:8080", strategy=strategy, 

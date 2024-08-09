@@ -3,17 +3,17 @@
 ### Example: python server.py --model <model-name> --min-clients <integer_no_of_clients>
 
 import flwr as fl
+import json
 import utils
 import numpy as np
 import pandas as pd
 import argparse
 from flwr.common import NDArrays, Scalar
+from pathlib import Path
 from sklearn.metrics import log_loss, mean_squared_error, r2_score 
 from sklearn.linear_model import LogisticRegression, LinearRegression, LassoCV
 from sklearn.svm import SVR
 from typing import List, Union, Dict, Optional, Tuple
-
-from flwr_datasets import FederatedDataset
 
 class SaveModelStrategy(fl.server.strategy.FedAvg):
     def aggregate_fit(
@@ -43,20 +43,13 @@ def fit_round(server_round: int) -> Dict:
 
 def get_evaluate_fn(model):
     """Return an evaluation function for server-side evaluation."""
-
-    #fds = FederatedDataset(dataset="mnist", partitioners={"train": 10})
-    #dataset = fds.load_split("test").with_format("numpy")
-    #X_test, y_test = dataset["image"].reshape((len(dataset), -1)), dataset["label"] #change according to line
-    dataset_full:pd.DataFrame = pd.read_csv("hbn_fs_data_split.csv")
-    dataset_full["sex"] = dataset_full["sex"].map({"M": 1, "F": 2})
-    dataset_full = dataset_full.drop (columns = ['subject_id', 
-                                                 'scan_site_id', 'ehq_total', 'commercial_use', 
-                                                 'full_pheno', 'expert_qc_score', 'xgb_qc_score', 
-                                                 'xgb_qsiprep_qc_score', 'dl_qc_score', 'site_variant', 
-                                                 'age_category', 'stratify_col'])
-    dataset_test:pd.DataFrame = dataset_full.loc[dataset_full['3_splits'] == -1]
-    y_test = dataset_test["age"]
-    X_test = dataset_test.drop(columns = ["age"])
+    
+    #Loads the data and splits into train and test datasets
+    _, (X_test, y_test) = utils.get_train_test_data(
+        path_csv=path_data,
+        split_col=split_col,
+        y_col=y_col,
+    )
 
     if isinstance(model, LogisticRegression):
         def evaluate(
@@ -65,9 +58,16 @@ def get_evaluate_fn(model):
             utils.set_model_params(model, parameters)
             loss = log_loss(y_test, model.predict_proba(X_test))
             accuracy = model.score(X_test, y_test)
+            
+            # Save aggregated_metrics
+            print(f"Saving round {server_round} aggregated_metrics...")
+            Path(f"round-{server_round}-metrics.json").write_text(json.dumps({
+                "loss": loss,
+                "accuracy": accuracy,
+            }))
+            
             return loss, {"accuracy": accuracy}
 
-        return evaluate
     if isinstance(model, (LinearRegression, LassoCV)):
         def evaluate(
             server_round: int, parameters: NDArrays, config: Dict[str, Scalar]
@@ -75,9 +75,17 @@ def get_evaluate_fn(model):
             utils.set_model_params(model, parameters)
             loss = mean_squared_error(y_test, model.predict(X_test))
             accuracy = r2_score(y_test,model.predict(X_test))
+
+            # Save aggregated_metrics
+            print(f"Saving round {server_round} aggregated_metrics...")
+            Path(f"round-{server_round}-metrics.json").write_text(json.dumps({
+                "loss": loss,
+                "accuracy": accuracy,
+            }))
+
             return loss, {"accuracy": accuracy}
 
-        return evaluate
+    return evaluate
 
 # Start Flower server for three rounds of federated learning
 if __name__ == "__main__":
@@ -87,18 +95,39 @@ if __name__ == "__main__":
         "--model",
         type=str,
         #choices=list["LogisticRegression", "LinearRegression", "LassoCV", "SVR"],
-        required=True,
+        default='LassoCV',
         help="Specifies the model used to fit",
     )
     parser.add_argument(
        "--min-clients",
         type=int,
-        required=True,
+        default=1,
         help="Number of clients",
         )
+    parser.add_argument(
+        '--data',
+        type=str,
+        required=True,
+        help='Path to data CSV file',
+    )
+    parser.add_argument(
+        "--split-col",
+        type=str,
+        default='3_splits',
+        help="Name of column used to split the data into train partitions and test set",
+    )
+    parser.add_argument(
+        "--y-col",
+        type=str,
+        default='age',
+        help="Name of output variable column",
+    )
     args = parser.parse_args()
     model_str = args.model
     min_clients = args.min_clients
+    path_data = args.data
+    split_col = args.split_col
+    y_col = args.y_col
 
   #choose model from args input and specify model parameters
     if model_str == 'LogisticRegression':
@@ -115,11 +144,12 @@ if __name__ == "__main__":
 
     utils.set_initial_params(model)
     strategy = SaveModelStrategy(
-        min_available_clients=3,
-        min_fit_clients=2,
-        min_evaluate_clients=2,
+        min_available_clients=min_clients,
+        min_fit_clients=min_clients,
+        min_evaluate_clients=min_clients,
         evaluate_fn=get_evaluate_fn(model),
         on_fit_config_fn=fit_round, 
+        on_evaluate_config_fn=fit_round,
     )  
 
     fl.server.start_server(server_address="0.0.0.0:8080", strategy=strategy, 

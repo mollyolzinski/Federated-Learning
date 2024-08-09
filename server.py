@@ -145,12 +145,19 @@ if __name__ == "__main__":
         default='age',
         help="Name of output variable column",
     )
+    parser.add_argument(
+        "--path-out",
+        type=Path,
+        default='metrics.csv',
+        help="Name of output CSV file containing server/client metrics",
+    )
     args = parser.parse_args()
     model_str = args.model
     min_clients = args.min_clients
     path_data = args.data
     split_col = args.split_col
     y_col = args.y_col
+    path_metrics_out = args.path_out
 
     metrics_list = []
 
@@ -181,7 +188,17 @@ if __name__ == "__main__":
                            config=fl.server.ServerConfig(num_rounds=5))
 
     df_metrics = pd.DataFrame(metrics_list)
-    print(df_metrics)
+    df_metrics['split_col'] = split_col
 
-    
-        
+    if path_metrics_out.exists():
+        df_metrics_old = pd.read_csv(path_metrics_out)
+        if (df_metrics_old['split_col'] == split_col).any():
+            overwrite = input(f'Metrics for split_col {split_col} already exist, overwrite? (y/n) ')
+            while overwrite not in ['y', 'n']:
+                overwrite = input("Please enter 'y' or 'n' (without quotes) ")
+            if overwrite == 'y':
+                df_metrics_old = df_metrics_old[df_metrics_old['split_col'] != split_col]
+                df_metrics = pd.concat([df_metrics_old, df_metrics])
+                df_metrics.to_csv(path_metrics_out, index=False)
+    else:
+        df_metrics.to_csv(path_metrics_out, index=False)

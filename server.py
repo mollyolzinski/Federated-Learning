@@ -3,17 +3,17 @@
 ### Example: python server.py --model <model-name> --min-clients <integer_no_of_clients>
 
 import flwr as fl
+import json
 import utils
 import numpy as np
 import pandas as pd
 import argparse
 from flwr.common import NDArrays, Scalar
+from pathlib import Path
 from sklearn.metrics import log_loss, mean_squared_error, r2_score 
 from sklearn.linear_model import LogisticRegression, LinearRegression, LassoCV
 from sklearn.svm import SVR
 from typing import List, Union, Dict, Optional, Tuple
-
-from flwr_datasets import FederatedDataset
 
 class SaveModelStrategy(fl.server.strategy.FedAvg):
     def aggregate_fit(
@@ -65,9 +65,16 @@ def get_evaluate_fn(model):
             utils.set_model_params(model, parameters)
             loss = log_loss(y_test, model.predict_proba(X_test))
             accuracy = model.score(X_test, y_test)
+            
+            # Save aggregated_metrics
+            print(f"Saving round {server_round} aggregated_metrics...")
+            Path(f"round-{server_round}-metrics.json").write_text(json.dumps({
+                "loss": loss,
+                "accuracy": accuracy,
+            }))
+            
             return loss, {"accuracy": accuracy}
 
-        return evaluate
     if isinstance(model, (LinearRegression, LassoCV)):
         def evaluate(
             server_round: int, parameters: NDArrays, config: Dict[str, Scalar]
@@ -75,9 +82,17 @@ def get_evaluate_fn(model):
             utils.set_model_params(model, parameters)
             loss = mean_squared_error(y_test, model.predict(X_test))
             accuracy = r2_score(y_test,model.predict(X_test))
+
+            # Save aggregated_metrics
+            print(f"Saving round {server_round} aggregated_metrics...")
+            Path(f"round-{server_round}-metrics.json").write_text(json.dumps({
+                "loss": loss,
+                "accuracy": accuracy,
+            }))
+
             return loss, {"accuracy": accuracy}
 
-        return evaluate
+    return evaluate
 
 # Start Flower server for three rounds of federated learning
 if __name__ == "__main__":
@@ -93,7 +108,7 @@ if __name__ == "__main__":
     parser.add_argument(
        "--min-clients",
         type=int,
-        required=True,
+        default=1,
         help="Number of clients",
         )
     args = parser.parse_args()
@@ -115,9 +130,9 @@ if __name__ == "__main__":
 
     utils.set_initial_params(model)
     strategy = SaveModelStrategy(
-        min_available_clients=3,
-        min_fit_clients=2,
-        min_evaluate_clients=2,
+        min_available_clients=min_clients,
+        min_fit_clients=min_clients,
+        min_evaluate_clients=min_clients,
         evaluate_fn=get_evaluate_fn(model),
         on_fit_config_fn=fit_round, 
     )  

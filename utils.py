@@ -7,7 +7,8 @@ from sklearn.svm import SVR
 
 from flwr.common import NDArrays
 
-def get_train_test_data(path_csv: Path, split_col: str, y_col: str, partition_id: int = None):
+def get_train_test_data(path_csv: Path, split_col: str, y_col: str, partition_id: int = None, 
+                        keep_features: list[str] = None):
     """Returns ((X_train, y_train), (X_test, y_test))."""
 
     # load dataframe
@@ -22,6 +23,9 @@ def get_train_test_data(path_csv: Path, split_col: str, y_col: str, partition_id
                                                  'full_pheno', 'expert_qc_score', 'xgb_qc_score', 
                                                  'xgb_qsiprep_qc_score', 'dl_qc_score', 'site_variant',
                                                  'age_category', 'stratify_col'])
+    
+    if keep_features is not None:
+        dataset_full = dataset_full.loc[:, keep_features]
 
     if partition_id is None:
         train_idx = dataset_full[split_col] != -1

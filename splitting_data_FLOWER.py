@@ -21,11 +21,15 @@ def split_dataframe(df : pd.DataFrame, stratify_vars: list[str], n_splits: int, 
     
     return splits
 
-def partition_dataset(path_data_csv: str, n_splits: int, n_splits_test: float, random_state=42) -> pd.DataFrame:
-
+def partition_dataset(df: pd.DataFrame, n_splits: int,
+                      n_splits_test: float, random_state=42, uneven:bool = False, 
+                      small_df_ratio: int = None) -> pd.DataFrame:
     # CSV loaded 
-    df = pd.read_csv(path_data_csv)
-    col_splits = f'{n_splits}_splits'
+    #df = pd.read_csv(path_data_csv)
+    if uneven == True and small_df_ratio is not None:
+        col_splits = f'{n_splits}_splits_{small_df_ratio}_small'
+    elif uneven == False:
+        col_splits = f'{n_splits}_splits'
     col_age_category = 'age_category'
     stratify_vars = [col_age_category, 'sex', 'scan_site_id']
 
@@ -41,14 +45,35 @@ def partition_dataset(path_data_csv: str, n_splits: int, n_splits_test: float, r
     df_test[col_splits] = -1
 
     df_train = pd.concat(train_test_splits[1:])
-    splits = split_dataframe(df=df_train, stratify_vars=stratify_vars, n_splits=n_splits, random_state=random_state)
-    # for i, split in enumerate(splits):
-    #     print(f"Split {i+1}:\n", split['stratify_col'].head())
-    
-    for i in range(n_splits):
-        splits[i][col_splits] = int(i)
+    # Sort DataFrame by age
+ #   df_train = df_train.sort_values(by='age')
 
+    # Split the DataFrame into thirds
+    # third = len(df_train) // 3
+    # df_train['three_splits_unbalanced'] = np.where(df_train.index < third, 1, 
+    #                    np.where(df_train.index < 2 * third, 2, 3))
+    if uneven == True and small_df_ratio is not None:
+        splits_small = split_dataframe(df=df_train, stratify_vars=stratify_vars, n_splits=small_df_ratio, random_state=random_state)
+        df_small = splits_small[n_splits-1]
+        df_small[col_splits] = n_splits-1
+        df_rest = pd.concat(splits_small[1:])
+        splits = split_dataframe(df=df_rest, stratify_vars=stratify_vars, n_splits=(n_splits-1), random_state=random_state)
+        for i in range(n_splits-1):
+            splits[i][col_splits] = int(i)
+        splits = splits + [df_small]
+        
+    elif uneven == False:
+        splits = split_dataframe(df=df_train, stratify_vars=stratify_vars, n_splits=n_splits, random_state=random_state)
+        # for i, split in enumerate(splits):
+        #     print(f"Split {i+1}:\n", split['stratify_col'].head()) 
+        for i in range(n_splits):
+            splits[i][col_splits] = int(i)
+    
+    #function returns dataframe split into datasets concatanated with the test dataframe
     return pd.concat(splits + [df_test])
+
+    #Create uneven data splits
+    
 
     #sanity check for distribution 
 
@@ -126,6 +151,18 @@ if __name__ == '__main__':
         default=DEFAULT_RANDOM_STATE,
         help=f"Random seed (default: {DEFAULT_RANDOM_STATE})",
     )
+    parser.add_argument(
+        "--uneven",
+        type=bool,
+        default=False,
+        help=f"Boolean to specify whether split should be uneven",
+    )
+    parser.add_argument(
+        "--small_df_ratio",
+        type=int,
+        default=None,
+        help=f"Integer to specify the ratio of the small df to rest of train data.",
+    )
     args = parser.parse_args()
 
     path_data_csv = args.data_csv
@@ -133,7 +170,14 @@ if __name__ == '__main__':
     n_splits_train = args.n_splits_train
     n_splits_test = args.n_splits_test
     random_state = args.random_state
-
-    df = partition_dataset(path_data_csv, n_splits_train, n_splits_test, random_state)
-    print(df[f'{n_splits_train}_splits'].value_counts())
-    df.to_csv(path_out, index=False)
+    uneven = args.uneven
+    small_df_ratio = args.small_df_ratio
+    if uneven == True and small_df_ratio is not None:
+        col_splits = f'{n_splits_train}_splits_{small_df_ratio}_small'
+    elif uneven == False:
+        col_splits = f'{n_splits_train}_splits'
+    
+    df = pd.read_csv(path_data_csv)
+    df_split = partition_dataset(df, n_splits_train, n_splits_test, random_state, uneven, small_df_ratio)
+    print(df_split[col_splits].value_counts())
+    df_split.to_csv(path_out, index=False)

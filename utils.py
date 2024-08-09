@@ -1,9 +1,49 @@
+from pathlib import Path
+
+import pandas as pd
 import numpy as np
 from sklearn.linear_model import LogisticRegression, LinearRegression, LassoCV
 from sklearn.svm import SVR
 
 from flwr.common import NDArrays
 
+def get_train_test_data(path_csv: Path, split_col: str, y_col: str, partition_id: int = None, 
+                        keep_features: list[str] = None):
+    """Returns ((X_train, y_train), (X_test, y_test))."""
+
+    # load dataframe
+    dataset_full: pd.DataFrame = pd.read_csv(path_csv)
+
+    # fix sex
+    dataset_full["sex"] = dataset_full["sex"].map({"M": 1, "F": 2})
+    
+    #create a list of columns specifying splits to drop
+    extra_columns_with_splits = [col for col in dataset_full.columns if 'splits' in col and col != split_col]
+
+    # drop unwanted columns
+    dataset_full = dataset_full.drop (columns = ['subject_id', 
+                                                 'scan_site_id', 'ehq_total', 'commercial_use', 
+                                                 'full_pheno', 'expert_qc_score', 'xgb_qc_score', 
+                                                 'xgb_qsiprep_qc_score', 'dl_qc_score', 'site_variant',
+                                                 'age_category', 'stratify_col'] + extra_columns_with_splits)
+    
+    if keep_features is not None:
+        dataset_full = dataset_full.loc[:, keep_features]
+
+    if partition_id is None:
+        train_idx = dataset_full[split_col] != -1
+    else:
+        train_idx = dataset_full[split_col] == partition_id
+    
+    dataset_train: pd.DataFrame = dataset_full.loc[train_idx]
+    y_train = dataset_train[y_col]
+    X_train = dataset_train.drop(columns = [y_col])
+    
+    dataset_test: pd.DataFrame = dataset_full.loc[dataset_full[split_col] == -1]
+    y_test = dataset_test[y_col]
+    X_test = dataset_test.drop(columns = [y_col])
+
+    return (X_train, y_train), (X_test, y_test)
 
 def get_model_parameters(model) -> NDArrays:
     """Returns the parameters of a sklearn LogisticRegression model."""

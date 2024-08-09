@@ -4,16 +4,18 @@
 
 import flwr as fl
 import utils
+import json
 import argparse
 import warnings
+import numpy as np
 import pandas as pd
 from flwr.common import NDArrays, Scalar
 from sklearn.metrics import log_loss, mean_squared_error, r2_score
 from sklearn.linear_model import LogisticRegression, LinearRegression, LassoCV
 from sklearn.svm import SVR
 from typing import Dict
+from pathlib import Path
 import matplotlib.pyplot as plt
-from flwr_datasets import FederatedDataset
 
 class MnistClient(fl.client.NumPyClient):
     def get_parameters(self, config):  # type: ignore
@@ -24,7 +26,14 @@ class MnistClient(fl.client.NumPyClient):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             model.fit(X_train, y_train)
-        print(f"Training finished for round {config['server_round']}")
+            
+        server_round = config["server_round"]
+        print(f"Training finished for round {server_round}")
+
+        # Save aggregated_ndarrays
+        print(f"Saving round {server_round} parameters...")
+        np.savez(f"round-{server_round}-partition-{partition_id}-weights.npz", *parameters)
+        
         return utils.get_model_parameters(model), len(X_train), {}
     
     def evaluate(self, parameters, config):  # type: ignore
@@ -35,6 +44,15 @@ class MnistClient(fl.client.NumPyClient):
         if isinstance(model, (LinearRegression, LassoCV)):
             loss = mean_squared_error(y_test, model.predict(X_test))
             accuracy = r2_score(y_test,model.predict(X_test))
+
+        # Save aggregated_metrics
+        server_round = config["server_round"]
+        print(f"Saving round {server_round} aggregated_metrics...")
+        Path(f"round-{server_round}-partition-{partition_id}-metrics.json").write_text(json.dumps({
+            "loss": loss,
+            "accuracy": accuracy,
+        }))
+
         return loss, len(X_test), {"accuracy": accuracy}
 
 if __name__ == "__main__": #run only if the script is being run directly as opposed to being imported from this script
@@ -42,9 +60,14 @@ if __name__ == "__main__": #run only if the script is being run directly as oppo
 
     parser = argparse.ArgumentParser(description="Flower")
     parser.add_argument(
+        '--data',
+        type=str,
+        required=True,
+        help='Path to data CSV file',
+    )
+    parser.add_argument(
         "--partition-id",
         type=int,
-        choices=range(0, N_CLIENTS),
         required=True,
         help="Specifies the artificial data partition",
     )
@@ -52,30 +75,39 @@ if __name__ == "__main__": #run only if the script is being run directly as oppo
         "--model",
         type=str,
         #choices=list["LogisticRegression", "LinearRegression", "LassoCV", "SVR"],
-        required=True,
+        default='LassoCV',
         help="Specifies the model used to fit",
     )
+    parser.add_argument(
+        "--split-col",
+        type=str,
+        default='3_splits',
+        help="Name of column used to split the data into train partitions and test set",
+    )
+    parser.add_argument(
+        "--y-col",
+        type=str,
+        default='age',
+        help="Name of output variable column",
+    )
+    
     args = parser.parse_args()
+    path_data = args.data
     partition_id = args.partition_id
     model_str = args.model
+    split_col = args.split_col
+    y_col = args.y_col
 
-#Loads the data and splits into train and test datasets
-    dataset_full:pd.DataFrame = pd.read_csv("hbn_fs_data_split.csv")
-    dataset_full["sex"] = dataset_full["sex"].map({"M": 1, "F": 2})
-    dataset_full = dataset_full.drop (columns = ['subject_id', 
-                                                 'scan_site_id', 'ehq_total', 'commercial_use', 
-                                                 'full_pheno', 'expert_qc_score', 'xgb_qc_score', 
-                                                 'xgb_qsiprep_qc_score', 'dl_qc_score', 'site_variant',
-                                                 'age_category', 'stratify_col'])
-    dataset_client:pd.DataFrame = dataset_full.loc[dataset_full['3_splits'] != partition_id]
-    y = dataset_client["age"]
-    X = dataset_client.drop(columns = ["age"])
-    #fds = FederatedDataset(dataset="mnist", partitioners={"train": N_CLIENTS})
-    #dataset = fds.load_partition(partition_id, "train").with_format("numpy")
-    #X, y = dataset["image"].reshape((len(dataset), -1)), dataset["label"]
-
-    X_train, X_test = X[: int(0.8 * len(X))], X[int(0.8 * len(X)) :]
-    y_train, y_test = y[: int(0.8 * len(y))], y[int(0.8 * len(y)) :]
+    #Loads the data and splits into train and test datasets
+    (X_client, y_client), _ = utils.get_train_test_data(
+        path_csv=path_data,
+        partition_id=partition_id,
+        split_col=split_col,
+        y_col=y_col,
+    )
+    
+    X_train, X_test = X_client[: int(0.8 * len(X_client))], X_client[int(0.8 * len(X_client)) :]
+    y_train, y_test = y_client[: int(0.8 * len(y_client))], y_client[int(0.8 * len(y_client)) :]
 
 
     #choose model from args input and specify model parameters

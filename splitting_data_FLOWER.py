@@ -21,15 +21,42 @@ def split_dataframe(df : pd.DataFrame, stratify_vars: list[str], n_splits: int, 
     
     return splits
 
-def partition_dataset(df: pd.DataFrame, n_splits: int,
-                      n_splits_test: float, random_state=42, uneven:bool = False, 
+def group_and_split(df):#, sort_vals, group_vars, add_group, split_groups):
+    # sort values by age     
+    df = df.sort_values(by='age').reset_index(drop=True)
+    # nested function for assigning groups
+    def assign_group(index):
+        if index <= 74:
+            return 1
+        elif   74 < index < 149:
+            return 2
+        else:
+            return 3
+        
+    # add grouping variable column
+    df['AgeGroup'] = df.index.to_series().apply(assign_group)
+
+    # define function to split into 3 groups
+    def split_by_age(df):
+        split1 = df[df['AgeGroup'] == 1]
+        split2 = df[df['AgeGroup'] == 2]
+        split3 = df[df['AgeGroup'] == 3]
+
+        splits = [split1, split2, split3]
+        return splits
+    split_df = split_by_age(df)
+    return split_df
+
+def partition_dataset(df: pd.DataFrame, n_splits: int, col_splits: str,
+                      n_splits_test: float, random_state=42, 
+                      uneven:bool = False, grouped_ages=False,
                       small_df_ratio: int = None) -> pd.DataFrame:
     # CSV loaded 
     #df = pd.read_csv(path_data_csv)
-    if uneven == True and small_df_ratio is not None:
-        col_splits = f'{n_splits}_splits_{small_df_ratio}_small'
-    elif uneven == False:
-        col_splits = f'{n_splits}_splits'
+    # if uneven == True and small_df_ratio is not None:
+    #     col_splits = f'{n_splits}_splits_{small_df_ratio}_small'
+    # elif uneven == False:
+    #     col_splits = f'{n_splits}_splits'
     col_age_category = 'age_category'
     stratify_vars = [col_age_category, 'sex', 'scan_site_id']
 
@@ -39,7 +66,7 @@ def partition_dataset(df: pd.DataFrame, n_splits: int,
     labels = [f'{i}-{i+2}' for i in bins[:-1]]
     df[col_age_category] = pd.cut(df['age'], bins=bins, labels=labels, right=False) 
 
-    # get the 20% test set
+    # get the test set
     train_test_splits = split_dataframe(df=df, stratify_vars=stratify_vars, n_splits=n_splits_test, random_state=random_state)
     df_test = train_test_splits[0]
     df_test[col_splits] = -1
@@ -63,7 +90,10 @@ def partition_dataset(df: pd.DataFrame, n_splits: int,
         splits = splits + [df_small]
         
     elif uneven == False:
-        splits = split_dataframe(df=df_train, stratify_vars=stratify_vars, n_splits=n_splits, random_state=random_state)
+        if grouped_ages:
+            splits = group_and_split(df=df_train)
+        else:
+            splits = split_dataframe(df=df_train, stratify_vars=stratify_vars, n_splits=n_splits, random_state=random_state)
         # for i, split in enumerate(splits):
         #     print(f"Split {i+1}:\n", split['stratify_col'].head()) 
         for i in range(n_splits):
@@ -172,15 +202,19 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         "--uneven",
-        type=bool,
-        default=False,
-        help=f"Boolean to specify whether split should be uneven",
+        action='store_true',
+        help="Use uneven splits",
+    )
+    parser.add_argument(
+        '--grouped_ages',
+        action='store_true',
+        help="Cannot be used in conjunction with --uneven",
     )
     parser.add_argument(
         "--small_df_ratio",
         type=int,
         default=None,
-        help=f"Integer to specify the ratio of the small df to rest of train data.",
+        help="Integer to specify the ratio of the small df to rest of train data.",
     )
     args = parser.parse_args()
 
@@ -190,13 +224,21 @@ if __name__ == '__main__':
     n_splits_test = args.n_splits_test
     random_state = args.random_state
     uneven = args.uneven
+    grouped_ages = args.grouped_ages
     small_df_ratio = args.small_df_ratio
+    
+    if uneven and grouped_ages:
+        raise RuntimeError(f'Cannot use both --uneven and --grouped_ages')
+
     if uneven == True and small_df_ratio is not None:
         col_splits = f'{n_splits_train}_splits_{small_df_ratio}_small'
     elif uneven == False:
-        col_splits = f'{n_splits_train}_splits'
+        if grouped_ages:
+            col_splits = f'{n_splits_train}_splits_grouped'
+        else:
+            col_splits = f'{n_splits_train}_splits'
     
     df = pd.read_csv(path_data_csv)
-    df_split = partition_dataset(df, n_splits_train, n_splits_test, random_state, uneven, small_df_ratio)
+    df_split = partition_dataset(df, n_splits_train, col_splits, n_splits_test, random_state, uneven, small_df_ratio)
     print(df_split[col_splits].value_counts())
     df_split.to_csv(path_out, index=False)

@@ -190,6 +190,7 @@ if __name__ == "__main__":
     df_metrics = pd.DataFrame(metrics_list)
     df_metrics['split_col'] = split_col
 
+    save = True
     if path_metrics_out.exists():
         df_metrics_old = pd.read_csv(path_metrics_out)
         if (df_metrics_old['split_col'] == split_col).any():
@@ -197,8 +198,13 @@ if __name__ == "__main__":
             while overwrite not in ['y', 'n']:
                 overwrite = input("Please enter 'y' or 'n' (without quotes) ")
             if overwrite == 'y':
+                print('Overwriting')
                 df_metrics_old = df_metrics_old[df_metrics_old['split_col'] != split_col]
-                df_metrics = pd.concat([df_metrics_old, df_metrics])
-                df_metrics.to_csv(path_metrics_out, index=False)
-    else:
+            else:
+                save = False
+                
+        df_metrics = pd.concat([df_metrics_old, df_metrics])
+
+    if save:
         df_metrics.to_csv(path_metrics_out, index=False)
+        print(f'Saved metrics file to {path_metrics_out}')

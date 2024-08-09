@@ -47,6 +47,9 @@ def get_train_test_data(path_csv: Path, split_col: str, y_col: str, partition_id
     return (X_train, y_train), (X_test, y_test)
 
 def get_metrics(model, X_test, y_test, round_number, source, partition_id=None) -> dict:
+    if partition_id is not None:
+        partition_id = int(partition_id)
+        
     metrics = {
         'round_number': round_number,
         'source': source,

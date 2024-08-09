@@ -43,20 +43,13 @@ def fit_round(server_round: int) -> Dict:
 
 def get_evaluate_fn(model):
     """Return an evaluation function for server-side evaluation."""
-
-    #fds = FederatedDataset(dataset="mnist", partitioners={"train": 10})
-    #dataset = fds.load_split("test").with_format("numpy")
-    #X_test, y_test = dataset["image"].reshape((len(dataset), -1)), dataset["label"] #change according to line
-    dataset_full:pd.DataFrame = pd.read_csv("hbn_fs_data_split.csv")
-    dataset_full["sex"] = dataset_full["sex"].map({"M": 1, "F": 2})
-    dataset_full = dataset_full.drop (columns = ['subject_id', 
-                                                 'scan_site_id', 'ehq_total', 'commercial_use', 
-                                                 'full_pheno', 'expert_qc_score', 'xgb_qc_score', 
-                                                 'xgb_qsiprep_qc_score', 'dl_qc_score', 'site_variant', 
-                                                 'age_category', 'stratify_col'])
-    dataset_test:pd.DataFrame = dataset_full.loc[dataset_full['3_splits'] == -1]
-    y_test = dataset_test["age"]
-    X_test = dataset_test.drop(columns = ["age"])
+    
+    #Loads the data and splits into train and test datasets
+    _, (X_test, y_test) = utils.get_train_test_data(
+        path_csv=path_data,
+        split_col=split_col,
+        y_col=y_col,
+    )
 
     if isinstance(model, LogisticRegression):
         def evaluate(
@@ -102,7 +95,7 @@ if __name__ == "__main__":
         "--model",
         type=str,
         #choices=list["LogisticRegression", "LinearRegression", "LassoCV", "SVR"],
-        required=True,
+        default='LassoCV',
         help="Specifies the model used to fit",
     )
     parser.add_argument(
@@ -111,9 +104,30 @@ if __name__ == "__main__":
         default=1,
         help="Number of clients",
         )
+    parser.add_argument(
+        '--data',
+        type=str,
+        required=True,
+        help='Path to data CSV file',
+    )
+    parser.add_argument(
+        "--split-col",
+        type=str,
+        default='3_splits',
+        help="Name of column used to split the data into train partitions and test set",
+    )
+    parser.add_argument(
+        "--y-col",
+        type=str,
+        default='age',
+        help="Name of output variable column",
+    )
     args = parser.parse_args()
     model_str = args.model
     min_clients = args.min_clients
+    path_data = args.data
+    split_col = args.split_col
+    y_col = args.y_col
 
   #choose model from args input and specify model parameters
     if model_str == 'LogisticRegression':

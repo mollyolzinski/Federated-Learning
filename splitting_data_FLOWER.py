@@ -69,6 +69,25 @@ def partition_dataset(df: pd.DataFrame, n_splits: int,
         for i in range(n_splits):
             splits[i][col_splits] = int(i)
     
+    #get 
+    columns_with_splits = [col for col in df_train.columns if 'splits' in col]
+    exclude_columns = ['subject_id', 'scan_site_id', 'ehq_total', 'commercial_use', 
+                            'full_pheno', 'expert_qc_score', 'xgb_qc_score', 
+                             'xgb_qsiprep_qc_score', 'dl_qc_score', 'site_variant',
+                             'age_category', 'stratify_col', 'age', 'sex'] + columns_with_splits
+    columns_to_score = [col for col in df_train.columns if col not in exclude_columns]
+    
+    for column in columns_to_score:
+        means = []
+        stds=[]
+        for i in range(n_splits):
+            means.append(splits[i][column].mean())
+            stds.append(splits[i][column].std())
+            splits[i][column] = splits[i][column].transform(lambda x: ((x-means[i])/stds[i]))
+        df_test[column] = df_test[column].transform(lambda x: ((x-np.mean(means))/np.mean(stds)))
+
+    result = pd.concat(splits + [df_test]).groupby(col_splits)["Cortex"].agg(['mean', 'std'])
+    print(result)
     #function returns dataframe split into datasets concatanated with the test dataframe
     return pd.concat(splits + [df_test])
 

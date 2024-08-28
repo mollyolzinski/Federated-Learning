@@ -1,5 +1,9 @@
+cloudpathlib
 flwr
+freesurfer_stats
+jupyter
 matplotlib
+numpy
 pandas
 scikit-learn
 seaborn

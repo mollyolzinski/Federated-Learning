@@ -34,6 +34,9 @@ Project url(s): (https://github.com/mollyolzinski/Federated-Learning.git)
 
 Contributors: [Michelle Wang](https://github.com/michellewang), [Emma Corley](https://github.com/emmajanecorley), [Eren Kafadar](https://github.com/kafadare), [Molly Olzinski](https://github.com/mollyolzinski), [Aoife Warren](https://github.com/AoifeWarren), [Audrey Weber](https://github.com/aweber7), [Maya Lakshman](https://github.com/mayalakshman) 
 
+## REPOSITORY CONTENTS
 
-
-
+This repository has three main directories:
+1. [`src`](src): main scripts/notebooks for the project. See [`src/README.md`](src/README.md) for more details.
+2. [`tutorial`](tutorial): Client and server scripts created when following the [tutorial for using scikit-learn models with the Flower framework](https://flower.ai/docs/framework/tutorial-quickstart-scikitlearn.html) and the [guide for saving model checkpoints](https://flower.ai/docs/framework/how-to-save-and-load-model-checkpoints.html). Also includes other exploration/testing files, including some preliminary work on dataset-splitting.
+3. [`slides`](slides): Presentation slides used in the last day of Neurohackademy.
